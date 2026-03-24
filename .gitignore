@@ -1,0 +1,62 @@
+#Каталоги сборки
+build/
+out/
+dist/
+cmake-build*/
+
+# Объектные файлы и библиотеки
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.la
+*.lo
+
+# Исполняемые файлы
+*.exe
+*.out
+
+# Отладочные символы и файлы
+*.pdb
+*.idb
+*.dSYM/
+*.dwo
+*.ilk
+*.map
+*.exp
+
+# Временные и служебные файлы
+*.tmp
+*.log
+*.bak
+*.swp
+
+# Кэш и временные директории
+.cache/
+.tmp/
+
+# Файлы IDE и редакторов
+.idea/
+.vscode/
+*.vcxproj*
+*.sln
+*.suo
+*.ncb
+*.user
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Конфигурационные файлы окружения
+.env
+*.env
+
+# Артефакты CMake
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
