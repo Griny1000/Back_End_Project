@@ -11,13 +11,12 @@ jobs:
 
 
                 steps:
-                        - uses: actions/checkout@v4
+                    - uses: actions/checkout@v4
 
-                        - name: Configure CMake
-                          run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+                    - name: Configure CMake
+                      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-                        - name: Build
-                          run: cmake --build build --config Release -j $(nproc)
-
-                         - name: Run tests
-                           run: ctest --test-dir build --output-on-failure
+                    - name: Build
+                      run: cmake --build build --config Release -j $(nproc)
+                    - name: Run tests
+                      run: ctest --test-dir build --output-on-failure
