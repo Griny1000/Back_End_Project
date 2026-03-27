@@ -1,5 +1,4 @@
 ### 3.6 CI (GitHub Actions)
-```yaml
 name: CI
 on:
         push:
