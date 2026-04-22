@@ -20,3 +20,8 @@ jobs:
                       run: cmake --build build --config Release -j $(nproc)
                     - name: Run tests
                       run: ctest --test-dir build --output-on-failure
+
+                    - name: Run benchmarks
+                      run: |
+                        cd build
+                        ctest -R benchmark --verbose

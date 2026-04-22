@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-add_subdirectory(libs/threadpool)
+add_subdirectory(libs/thread_pool)
 
 add_subdirectory(projects/http_server)
 add_subdirectory(projects/in_memory_cache)
