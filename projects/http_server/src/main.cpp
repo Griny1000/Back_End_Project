@@ -4,13 +4,40 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "ThreadPool.hpp"
 
 
 const int PORT = 8000;
 const int BUFFER_SIZE = 4096;
 
+void handle_client(int client_fd)
+{
+	char buffer[BUFFER_SIZE] = {0};
+	int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
+	if(bytes_read > 0)
+	{
+		std::cout << "----- Received HTTP request -----\n";
+		std::cout << buffer << std::endl;
+		std::cout << "---------------------------------\n";
+	}
+
+	std::string response = 
+		"HTTP/1.1 200 OK\r\n"
+		"Content_Type: text/plain\r\n"
+		"Content-Length: 13\r\n"
+		"\r\n"
+		"Hello, world!";
+
+	send(client_fd, response.c_str(), response.size(), 0);
+
+	close(client_fd);
+	std::cout << "Connection closed by handler thread " << std::this_thread::get_id() << std::endl;
+}
+
 int main()
 {
+	ThreadPool pool(4);
+
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if(server_fd < 0)
 	{
@@ -42,7 +69,7 @@ int main()
 		return 1;
 	}
 
-	std::cout << "Server listening on port " << PORT << std::endl;
+	std::cout << "Multithreaded server listening on port " << PORT << std::endl;
 
 	while(true)
 	{
@@ -54,27 +81,11 @@ int main()
 			continue;
 		}
 
-		std::cout << "New connection accepted\n";
+		std::cout << "New connection accepted. Dispatching to thread pool.\n";
 
-		char buffer[BUFFER_SIZE] = {0};
-		int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-		if(bytes_read > 0)
-		{
-			std::cout << "----- Received HTTP request -----\n";
-			std::cout << buffer << std::endl;
-			std::cout << "---------------------------------\n";
-		}
-
-		std::string response =
-			"HTTP/1.1 200 OK\r\n"
-			"Conect-Type: text/plain\r\n"
-			"Content-Length: 13\r\n"
-			"\r\n"
-			"Hello, world!";
-
-		send(client_fd, response.c_str(), response.size(), 0);
-		close(client_fd);
-		std::cout << "Connection closed\n";
+		pool.enqueue([client_fd](){
+				handle_client(client_fd);
+				});
 	}
 
 	close(server_fd);

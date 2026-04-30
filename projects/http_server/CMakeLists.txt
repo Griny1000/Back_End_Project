@@ -6,4 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(http_server src/main.cpp)
 
-target_link_libraries(http_server PRIVATE pthread)
+target_link_libraries(http_server PRIVATE ThreadPool pthread)
+target_include_directories(http_server PRIVATE 
+	${CMAKE_CURRENT_SOURCE_DIR}/../../libs/thread_pool/include
+)
