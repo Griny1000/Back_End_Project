@@ -5,48 +5,67 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "ThreadPool.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
+#include <filesystem>
 
-
-const int PORT = 8000;
+const int PORT = 8080;
 const int BUFFER_SIZE = 4096;
+const std::string STATIC_ROOT = "./static/";
 
-void handle_client(int client_fd)
+void handleClient(int clientFd)
 {
 	char buffer[BUFFER_SIZE] = {0};
-	int bytes_read = read(client_fd, buffer, BUFFER_SIZE - 1);
-	if(bytes_read > 0)
+	int bytesRead = read(clientFd, buffer, BUFFER_SIZE - 1);
+	if(bytesRead <= 0)
 	{
-		std::cout << "----- Received HTTP request -----\n";
-		std::cout << buffer << std::endl;
-		std::cout << "---------------------------------\n";
+		close(clientFd);	
+	}
+	std::string raw(buffer, bytesRead);
+	HttpRequest req = parseHttpRequest(raw);
+
+	std::cout << "Thread " << std::this_thread::get_id()
+		    << " -> " << req.method << " " << req.path << std::endl;
+
+	if(req.path.find("/static/") == 0)
+	{
+		std::cout << "Working directory: " << std::filesystem::current_path() << std::endl;
+		for (const auto& entry : std::filesystem::directory_iterator("./static"))
+			    std::cout << "Static file found: " << entry.path() << std::endl;
+		std::string relative = req.path.substr(8);
+		std::string fullPath = STATIC_ROOT + relative;
+		if(sendFile(clientFd, fullPath))
+		{
+			close(clientFd);
+			return;
+		}
+		else
+		{
+			std::string error = "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found";
+			send(clientFd, error.c_str(), error.size(), 0);
+			close(clientFd);
+			return;
+		}
 	}
 
-	std::string response = 
-		"HTTP/1.1 200 OK\r\n"
-		"Content_Type: text/plain\r\n"
-		"Content-Length: 13\r\n"
-		"\r\n"
-		"Hello, world!";
-
-	send(client_fd, response.c_str(), response.size(), 0);
-
-	close(client_fd);
-	std::cout << "Connection closed by handler thread " << std::this_thread::get_id() << std::endl;
+	std::string response = buildResponse(req);
+	send(clientFd, response.c_str(), response.size(), 0);
+	close(clientFd);
 }
 
 int main()
 {
 	ThreadPool pool(4);
 
-	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if(server_fd < 0)
+	int serverFd = socket(AF_INET, SOCK_STREAM, 0);
+	if(serverFd < 0)
 	{
 		std::cerr << "Failed to create socket\n";
 		return 1;
 	}
 
 	int opt = 1;
-	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 
 	struct sockaddr_in address;
@@ -55,17 +74,17 @@ int main()
 	address.sin_port = htons(PORT);
 
 
-	if(bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0)
+	if(bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0)
 	{
 		std::cerr << "Bind failed\n";
-		close(server_fd);
+		close(serverFd);
 		return 1;
 	}
 
-	if(listen(server_fd, 3) < 0)
+	if(listen(serverFd, 3) < 0)
 	{
 		std::cerr << "Listen failed\n";
-		close(server_fd);
+		close(serverFd);
 		return 1;
 	}
 
@@ -74,8 +93,8 @@ int main()
 	while(true)
 	{
 		socklen_t addrlen = sizeof(address);
-		int client_fd = accept(server_fd, (struct sockaddr*)&address, &addrlen);
-		if(client_fd < 0)
+		int clientFd = accept(serverFd, (struct sockaddr*)&address, &addrlen);
+		if(clientFd < 0)
 		{
 			std::cerr << "Accept failed\n";
 			continue;
@@ -83,11 +102,11 @@ int main()
 
 		std::cout << "New connection accepted. Dispatching to thread pool.\n";
 
-		pool.enqueue([client_fd](){
-				handle_client(client_fd);
+		pool.enqueue([clientFd](){
+				handleClient(clientFd);
 				});
 	}
 
-	close(server_fd);
+	close(serverFd);
 	return 0;
 }
